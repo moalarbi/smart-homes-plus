@@ -1,5 +1,5 @@
 # استخدام صورة Node.js مستقرة
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 # تعيين دليل العمل
 WORKDIR /app
@@ -16,8 +16,16 @@ COPY . .
 # بناء المشروع
 RUN npm run build
 
-# استخدام خادم بسيط لتقديم الملفات الثابتة (بما أن المشروع Vite)
+# مرحلة التشغيل
+FROM node:20-alpine
+
+WORKDIR /app
+
+# تثبيت خادم بسيط لتقديم الملفات الثابتة
 RUN npm install -g serve
+
+# نسخ الملفات المبنية فقط من مرحلة البناء
+COPY --from=builder /app/dist ./dist
 
 # تعيين المنفذ
 EXPOSE 3000
