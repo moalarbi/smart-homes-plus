@@ -1,34 +1,29 @@
-# استخدام صورة Node.js مستقرة
+# ---- build stage ----
 FROM node:20-alpine AS builder
-
-# تعيين دليل العمل
 WORKDIR /app
 
-# نسخ ملفات التعريف
 COPY package*.json ./
-
-# تثبيت التبعيات
 RUN npm install
 
-# نسخ باقي ملفات المشروع
 COPY . .
-
-# بناء المشروع
 RUN npm run build
 
-# مرحلة التشغيل
-FROM node:20-alpine
-
+# ---- run stage ----
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# تثبيت خادم بسيط لتقديم الملفات الثابتة
-RUN npm install -g serve
+# تثبيت التبعيات الضرورية للتشغيل
+COPY package*.json ./
+RUN npm install --only=production
+RUN npm i -g serve ts-node typescript
 
-# نسخ الملفات المبنية فقط من مرحلة البناء
+# نسخ ملفات الواجهة المبنية
 COPY --from=builder /app/dist ./dist
+# نسخ ملفات الباكند
+COPY --from=builder /app/server ./server
 
-# تعيين المنفذ
 EXPOSE 3000
+EXPOSE 8080
 
-# أمر التشغيل
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# تشغيل الـ API والواجهة معاً
+CMD ["sh", "-c", "npx ts-node server/server.ts & serve -s dist -l 3000"]
